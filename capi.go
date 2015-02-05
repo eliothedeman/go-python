@@ -6,6 +6,7 @@ package python
 import (
 	"C"
 	"fmt"
+	"encoding/binary"
 )
 import "reflect"
 
@@ -51,25 +52,34 @@ func vb_String(i interface{}) *PyObject {
 
 // vb_TinyInt return a pyobject containing a TinyInt
 func vb_Int(i interface{}) *PyObject {
-	var v int
+	var v int64
 	switch t := i.(type) {
 	case []byte:
-		// not sure exaclty what to do here. I am guessing just treat the first 8 bytes as an unsigned int
-
-	case string:
-		// same as above
-		b := []byte(t)
-		if len(b) == 0 {
-			v = 0
-		} else {
-			v = b[0]
+		
+		// not sure exaclty what to do here. I am guessing just treat the first 8 bytes a a 64 bit int
+		if len(t) < 8 {
+			t = append(t,make([]byte, 8 - len(t))
 		}
+		v,_ = binary.Varint(t[:8])
+	case string:
+		b := []byte(t)
+
+		// not sure exaclty what to do here. I am guessing just treat the first 8 bytes a a 64 bit int
+		if len(t) < 8 {
+			b = append(b,make([]byte, 8 - len(t))
+		}
+		v,_ = binary.Varint(b[:8])
+
+	// get the value as an int see if there is a way to do this without using reflection
 	case uint8, int8, int16, uint16, int32, uint32, int, uint, int64, uint64:
 		v = reflect.ValueOf(t).Int()
+
+	// all other types that cant be put into an int type, assume we are ok with a zero value
 	default:
 		v = 0
 	}
 
+	return PyLong_FromLong(v)
 }
 
 // PyObject* Py_BuildValue(const char *format, ...)
